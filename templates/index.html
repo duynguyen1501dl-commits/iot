@@ -1,0 +1,608 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IoT Web Monitor - PTIT</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f3f6fb;
+    color: #192c48;
+}
+
+header {
+    background: #173d70;
+    color: white;
+    padding: 22px 32px;
+}
+
+header h1 {
+    margin: 0 0 8px;
+    font-size: 26px;
+}
+
+header p {
+    margin: 0;
+    opacity: 0.85;
+}
+
+main {
+    max-width: 1200px;
+    margin: auto;
+    padding: 22px;
+}
+
+.panel {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 10px #00000010;
+    margin-bottom: 18px;
+}
+
+.panel h2 {
+    font-size: 19px;
+    margin: 0 0 18px;
+}
+
+.filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: end;
+}
+
+.filter-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+label {
+    font-size: 14px;
+}
+
+select {
+    border: 1px solid #cbd5e1;
+    background: white;
+    border-radius: 7px;
+    padding: 10px;
+    min-width: 160px;
+    font-size: 14px;
+}
+
+button {
+    background: #1769ba;
+    border: none;
+    border-radius: 7px;
+    color: white;
+    padding: 11px 20px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+button:hover {
+    background: #104f91;
+}
+
+.checks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.checks label {
+    display: flex;
+    gap: 7px;
+    align-items: center;
+    background: #f1f5fa;
+    border-radius: 8px;
+    padding: 11px 13px;
+    cursor: pointer;
+}
+
+input[type="checkbox"] {
+    accent-color: #1769ba;
+    width: 16px;
+    height: 16px;
+}
+
+#status {
+    margin: 12px 0 20px;
+    color: #50627c;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.cards {
+    display: grid;
+    grid-template-columns:
+        repeat(auto-fit, minmax(185px, 1fr));
+    gap: 14px;
+}
+
+.card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 9px #00000010;
+    min-height: 130px;
+}
+
+.card-title {
+    font-size: 14px;
+    color: #566881;
+    font-weight: bold;
+}
+
+.card-value {
+    font-size: 27px;
+    font-weight: bold;
+    margin-top: 12px;
+}
+
+.card-time {
+    font-size: 12px;
+    color: #728198;
+    margin-top: 12px;
+}
+
+.charts {
+    display: grid;
+    grid-template-columns:
+        repeat(auto-fit, minmax(340px, 1fr));
+    gap: 16px;
+    margin-top: 18px;
+}
+
+.chart {
+    background: white;
+    border-radius: 12px;
+    padding: 18px;
+    box-shadow: 0 2px 9px #00000010;
+}
+
+.chart h3 {
+    margin: 0 0 8px;
+    font-size: 16px;
+}
+
+.chart svg {
+    width: 100%;
+    height: 240px;
+}
+
+.hint {
+    font-size: 13px;
+    color: #77869a;
+}
+
+.empty {
+    padding: 24px;
+    background: white;
+    border-radius: 10px;
+    color: #64748b;
+}
+
+@media (max-width: 600px) {
+    main {
+        padding: 12px;
+    }
+
+    header {
+        padding: 18px;
+    }
+
+    .charts {
+        grid-template-columns: 1fr;
+    }
+
+    .filters {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    select, button {
+        width: 100%;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>IoT Web Monitor</h1>
+    <p>ESP32 - HiveMQ - InfluxDB - PTIT</p>
+</header>
+
+<main>
+
+<section class="panel">
+    <h2>1. Chọn thông số cần hiển thị</h2>
+
+    <div class="checks">
+        <label>
+            <input type="checkbox" class="metric" value="temperature" checked>
+            Nhiệt độ
+        </label>
+
+        <label>
+            <input type="checkbox" class="metric" value="humidity" checked>
+            Độ ẩm
+        </label>
+
+        <label>
+            <input type="checkbox" class="metric" value="distance_cm" checked>
+            Khoảng cách
+        </label>
+
+        <label>
+            <input type="checkbox" class="metric" value="rtt_ms" checked>
+            RTT (ACK)
+        </label>
+
+        <label>
+            <input type="checkbox" class="metric" value="temperature_roll3">
+            Nhiệt độ trung bình trượt
+        </label>
+
+        <label>
+            <input type="checkbox" class="metric" value="temperature_z">
+            Nhiệt độ chuẩn hóa
+        </label>
+    </div>
+</section>
+
+<section class="panel">
+    <h2>2. Bộ lọc hiển thị</h2>
+
+    <div class="filters">
+        <div class="filter-item">
+            <label for="range">Khoảng thời gian</label>
+            <select id="range">
+                <option value="15m">15 phút gần nhất</option>
+                <option value="1h" selected>1 giờ gần nhất</option>
+                <option value="6h">6 giờ gần nhất</option>
+                <option value="24h">24 giờ gần nhất</option>
+                <option value="7d">7 ngày gần nhất</option>
+            </select>
+        </div>
+
+        <div class="filter-item">
+            <label for="agg">Cách lấy dữ liệu</label>
+            <select id="agg">
+                <option value="last">Giá trị cuối mỗi khoảng</option>
+                <option value="mean">Giá trị trung bình</option>
+            </select>
+        </div>
+
+        <button id="apply" type="button">
+            Áp dụng bộ lọc
+        </button>
+    </div>
+</section>
+
+<div id="status">Đang tải dữ liệu...</div>
+
+<section>
+    <h2>3. Thông số cảm biến</h2>
+    <div class="cards" id="cards"></div>
+</section>
+
+<section>
+    <h2>4. Biểu đồ theo thời gian</h2>
+    <div class="charts" id="charts"></div>
+</section>
+
+</main>
+
+<script>
+const CONFIG = {
+    temperature: {
+        name: "Nhiệt độ",
+        unit: "°C",
+        color: "#e76f51"
+    },
+    humidity: {
+        name: "Độ ẩm",
+        unit: "%",
+        color: "#277da1"
+    },
+    distance_cm: {
+        name: "Khoảng cách",
+        unit: "cm",
+        color: "#43aa8b"
+    },
+    rtt_ms: {
+        name: "RTT (ACK)",
+        unit: "ms",
+        color: "#8e44ad"
+    },
+    temperature_roll3: {
+        name: "Nhiệt độ trung bình trượt",
+        unit: "°C",
+        color: "#e9a23b"
+    },
+    temperature_z: {
+        name: "Nhiệt độ chuẩn hóa",
+        unit: "",
+        color: "#6366f1"
+    }
+};
+
+let busy = false;
+
+function selectedMetrics() {
+    return Array.from(
+        document.querySelectorAll(".metric:checked")
+    ).map(element => element.value);
+}
+
+function formatTime(time) {
+    return new Date(time).toLocaleString("vi-VN");
+}
+
+function drawChart(svg, series, color) {
+    const points = series
+        .filter(item => Number.isFinite(item.value))
+        .filter(item => item.value !== -1 ||
+            !svg.dataset.distance)
+        .map(item => ({
+            t: new Date(item.time).getTime(),
+            v: item.value
+        }))
+        .filter(item => Number.isFinite(item.t))
+        .sort((a, b) => a.t - b.t);
+
+    if (points.length === 0) {
+        svg.innerHTML =
+            '<text x="270" y="115" fill="#64748b">' +
+            'Chưa có dữ liệu</text>';
+        return;
+    }
+
+    const W = 700;
+    const H = 240;
+    const left = 58;
+    const right = 18;
+    const top = 20;
+    const bottom = 38;
+
+    let xmin = points[0].t;
+    let xmax = points[points.length - 1].t;
+
+    let ymin = Math.min(...points.map(p => p.v));
+    let ymax = Math.max(...points.map(p => p.v));
+
+    if (xmin === xmax) xmax += 1000;
+
+    if (ymin === ymax) {
+        ymin -= 1;
+        ymax += 1;
+    }
+
+    const x = t => left +
+        (t - xmin) / (xmax - xmin) *
+        (W - left - right);
+
+    const y = v => H - bottom -
+        (v - ymin) / (ymax - ymin) *
+        (H - top - bottom);
+
+    let html = "";
+
+    for (let i = 0; i <= 4; i++) {
+        const val = ymin + (ymax - ymin) * i / 4;
+        const yy = y(val);
+
+        html += `<line x1="${left}" y1="${yy}"
+          x2="${W-right}" y2="${yy}"
+          stroke="#e2e8f0"/>`;
+
+        html += `<text x="2" y="${yy+4}"
+          font-size="12" fill="#64748b">
+          ${val.toFixed(1)}</text>`;
+    }
+
+    const coords = points.map(
+        p => `${x(p.t)},${y(p.v)}`
+    ).join(" ");
+
+    html += `<polyline points="${coords}"
+      fill="none" stroke="${color}"
+      stroke-width="3" stroke-linejoin="round"/>`;
+
+    for (const p of points) {
+        html += `<circle cx="${x(p.t)}"
+          cy="${y(p.v)}" r="3"
+          fill="${color}"/>`;
+    }
+
+    const first = new Date(xmin)
+        .toLocaleTimeString("vi-VN");
+
+    const last = new Date(points[points.length - 1].t)
+        .toLocaleTimeString("vi-VN");
+
+    html += `<text x="${left}" y="229"
+      font-size="12" fill="#64748b">${first}</text>`;
+
+    html += `<text x="${W-120}" y="229"
+      font-size="12" fill="#64748b">${last}</text>`;
+
+    svg.innerHTML = html;
+}
+
+function renderData(data, selected) {
+    const cards = document.getElementById("cards");
+    const charts = document.getElementById("charts");
+
+    cards.innerHTML = "";
+    charts.innerHTML = "";
+
+    for (const key of selected) {
+        const config = CONFIG[key];
+        const series = data.series[key] || [];
+
+        const latest = series.length
+            ? series[series.length - 1]
+            : null;
+
+        const card = document.createElement("div");
+        card.className = "card";
+
+        const title = document.createElement("div");
+        title.className = "card-title";
+        title.textContent = config.name;
+
+        const value = document.createElement("div");
+        value.className = "card-value";
+
+        if (latest) {
+            if (key === "distance_cm" &&
+                latest.value < 0) {
+                value.textContent = "Không có echo";
+            } else {
+                value.textContent =
+                    latest.value.toFixed(2) +
+                    " " + config.unit;
+            }
+        } else {
+            value.textContent = "--";
+        }
+
+        const time = document.createElement("div");
+        time.className = "card-time";
+
+        time.textContent = latest
+            ? "Mốc dữ liệu: " + formatTime(latest.time)
+            : "Chưa có dữ liệu trong khoảng đã chọn";
+
+        card.append(title, value, time);
+        cards.appendChild(card);
+
+        const chart = document.createElement("div");
+        chart.className = "chart";
+
+        const heading = document.createElement("h3");
+        heading.textContent = config.name;
+
+        const note = document.createElement("div");
+        note.className = "hint";
+        note.textContent =
+            series.length + " mốc dữ liệu";
+
+        const svg = document.createElementNS(
+            "http://www.w3.org/2000/svg", "svg"
+        );
+
+        svg.setAttribute("viewBox", "0 0 700 240");
+
+        if (key === "distance_cm") {
+            svg.dataset.distance = "true";
+        }
+
+        chart.append(heading, note, svg);
+        charts.appendChild(chart);
+
+        drawChart(svg, series, config.color);
+    }
+}
+
+async function loadData() {
+    if (busy) return;
+
+    const selected = selectedMetrics();
+    const status = document.getElementById("status");
+
+    if (selected.length === 0) {
+        status.textContent =
+            "Hãy tích chọn ít nhất một thông số.";
+        document.getElementById("cards").innerHTML = "";
+        document.getElementById("charts").innerHTML = "";
+        return;
+    }
+
+    busy = true;
+    status.textContent = "Đang cập nhật từ InfluxDB...";
+
+    const params = new URLSearchParams();
+
+    params.set(
+        "range",
+        document.getElementById("range").value
+    );
+
+    params.set(
+        "agg",
+        document.getElementById("agg").value
+    );
+
+    for (const metric of selected) {
+        params.append("metric", metric);
+    }
+
+    try {
+        const response = await fetch(
+            "/api/data?" + params.toString(),
+            { cache: "no-store" }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || "Lỗi API");
+        }
+
+        renderData(data, selected);
+
+        const counts = selected.reduce(
+            (sum, key) =>
+                sum + (data.series[key] || []).length,
+            0
+        );
+
+        let message =
+            "Thiết bị: " + data.device +
+            " | Tổng mốc dữ liệu: " + counts +
+            " | Làm mới: " +
+            new Date().toLocaleTimeString("vi-VN");
+
+        if (data.warnings.length) {
+            message +=
+                " | Cảnh báo: " + data.warnings.join("; ");
+        }
+
+        if (selected.includes("rtt_ms") &&
+            !(data.series.rtt_ms || []).length) {
+            message +=
+                " | Chưa có RTT: kiểm tra ACK trên Wokwi và Python";
+        }
+
+        status.textContent = message;
+
+    } catch (error) {
+        status.textContent = "LỖI: " + error.message;
+    } finally {
+        busy = false;
+    }
+}
+
+document.getElementById("apply")
+    .addEventListener("click", loadData);
+
+loadData();
+setInterval(loadData, 5000);
+</script>
+
+</body>
+</html>
